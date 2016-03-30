@@ -1,15 +1,24 @@
 var CronJob = require('cron').CronJob;
 var config = require('./config');
 
-var cron = config.cronjobs[0];
-
-var job = new CronJob(cron, function() {
-  checkTeamcity();
-}, null,
-  true
-);
-
+function init(){
+  for (var i = 0; i < config.cronjobs.length; i++) {
+    var cron = config.cronjobs[i];
+    var job = new CronJob(cron, function() {
+      var result = checkTeamcity();
+      performIntegrations(result);
+    }, null,
+      true
+    );
+  }
+}
 
 function checkTeamcity(){
-  console.log('go look at teamcity');
+  return {"msg":"go look at team city"};
 }
+
+function performIntegrations(buildStatus){
+  console.log(buildStatus.msg);
+}
+
+init();

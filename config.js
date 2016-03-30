@@ -7,7 +7,7 @@ config.teamcity_password = '';
 config.active_period_start_utc = "";
 config.active_period_end_utc = ""
 
-config.cronjobs = ["* * * * * *"];
+config.cronjobs = ["* * * * * *","* * * * * *"];
 
 config.monitor = [];
 config.period_in_minutes = 30;
