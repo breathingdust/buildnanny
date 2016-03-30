@@ -7,7 +7,9 @@ function init(){
     var cron = config.cronjobs[i];
     var job = new CronJob(cron, function() {
       var result = checkTeamcity();
-      performIntegrations(result);
+      performIntegrations({
+        ""
+      });
     }, null,
       true
     );
@@ -23,9 +25,10 @@ function checkTeamcity(){
   buildConfigurations.push(getConfigurationsForProjects(config.projects));
   buildConfigurations.push(config.buildConfigurations);
 
-  var failingBuildConfigurations = getFailingBuilds(buildConfigurations);
-  
-  return {"msg":"go look at team city"};
+  return {
+    "totalBuildConfigurations": buildConfigurations.length,
+    "failingBuilds": getFailingBuilds(buildConfigurations);
+  }
 }
 
 function getTeamcitySession(host, username, password){
