@@ -1,0 +1,13 @@
+{
+  "name": "buildcop",
+  "version": "1.0.0",
+  "description": "Utility to monitor teamcity for broken builds, and notify/nag interested parties",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+  }
+}
