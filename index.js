@@ -1,47 +1,80 @@
 var CronJob = require('cron').CronJob;
 var config = require('./config');
 var request = require('request');
+var Promise = require('promise');
 
-function init(){
+function init() {
   for (var i = 0; i < config.cronjobs.length; i++) {
-    var cron = config.cronjobs[i];
-    var job = new CronJob(cron, function() {
-      var result = checkTeamcity();
-      performIntegrations({
-        ""
-      });
-    }, null,
+    var cronPattern = config.cronjobs[i];
+    var job = new CronJob(cronPattern, function() {
+        var result = checkTeamcity();
+      }, null,
       true
     );
   }
 }
 
-function checkTeamcity(){
-  var teamcity_host = config.teamcity_host;
-  var session = getTeamcitySession(teamcity_host, teamcity_username, teamcity_password);
-
-  var buildConfigurations = [];
-
-  buildConfigurations.push(getConfigurationsForProjects(config.projects));
-  buildConfigurations.push(config.buildConfigurations);
-
-  return {
-    "totalBuildConfigurations": buildConfigurations.length,
-    "failingBuilds": getFailingBuilds(buildConfigurations);
-  }
+function getConfigurationsForProjects(){
+  return Promise.all(config.projects.map(getConfigurationsForProject));
 }
 
-function getTeamcitySession(host, username, password){
-  request.get('http://some.server.com/').auth('username', 'password', false);
-
+function getConfigurationsForProject(project){
+  var options = {
+    url: config.teamcity_host + '/httpAuth/app/rest/projects/id:' + project + '/buildTypes',
+    headers: {
+      accept: 'application/json'
+    }
+  };
+  return new Promise(function(resolve){
+    request.get(options, function(error, response, body){
+      var buildTypes = JSON.parse(body).buildType;
+      resolve(buildTypes);
+    }).auth(config.teamcity_username, config.teamcity_password, false);
+  });
 }
 
-function constructTeamcityRequest(){
-  return request.get()
+function getFailingBuildsForBuildType(buildType){
+    var options = {
+    url: config.teamcity_host + '/httpAuth/app/rest/buildTypes/id:' + buildType.id + '/builds?locator=count:1',
+    headers: {
+      accept: 'application/json'
+    }
+  };
+
+  return new Promise(function(resolve){
+    request.get(options, function(error, response, body){
+      var build = JSON.parse(body).build;
+      if (build.length > 0 && build[0].status === 'FAILURE'){
+        resolve(build[0].buildTypeId);
+      }
+      resolve();
+    }).auth(config.teamcity_username, config.teamcity_password, false);
+  });
 }
 
-function performIntegrations(buildStatus){
-  console.log(buildStatus.msg);
+function getFailingBuildsForRegisteredProjects(){
+  return new Promise(function(resolve){
+    getConfigurationsForProjects().then(function(buildTypes){
+      var flattenedTypes = [].concat.apply([], buildTypes);
+      Promise.all(flattenedTypes.map(getFailingBuildsForBuildType)).then(function(values) {
+        var failingBuilds = [];
+        for (var i = 0; i < values.length; i++) {
+          if (values[i]){
+            failingBuilds.push(values[i]);
+          }
+        }
+        resolve(failingBuilds);
+      }, function(reason){
+        console.log(reason);
+      });
+    });
+  })
 }
 
-init();
+// getConfigurationsForProjects().then(function(res){
+//   getFailingBuildsForRegisteredProjects
+// });
+
+getFailingBuildsForRegisteredProjects().then(function(res){
+  console.log(res);
+});
